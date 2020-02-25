@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.5)
 
 project(uccn)
 
-include_directories(include vendor)
-
 add_subdirectory(vendor)
 
 add_library(${PROJECT_NAME}
@@ -11,6 +9,11 @@ add_library(${PROJECT_NAME}
   src/common/hash.c
   src/utilities/upoll.c
   src/utilities/eventfd.c
+)
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/vendor>
 )
 
 target_link_libraries(${PROJECT_NAME} mpack)
