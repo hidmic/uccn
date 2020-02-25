@@ -1,3 +1,5 @@
+add_compile_options(-Wall -Wextra -Werror)
+
 add_library(simple_resources simple_record.c)
 
 target_link_libraries(simple_resources ${PROJECT_NAME} mpack)

@@ -14,9 +14,9 @@ int main(int argc, char * argv[]) {
   int ret;
   struct uccn_node_s node;
   struct uccn_network_s network;
-  struct in_addr netaddress;
   struct uccn_record_s test_record;
 
+  (void)argc;
 #ifdef CONFIG_UCCN_LOGGING
   openlog(argv[0], LOG_PID | LOG_PERROR, LOG_USER);
 #endif

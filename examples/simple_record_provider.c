@@ -9,8 +9,6 @@
 
 int main(int argc, char * argv[]) {
   int ret;
-  char * data;
-
   struct timespec timeout;
 
   struct uccn_node_s node;
@@ -39,7 +37,7 @@ int main(int argc, char * argv[]) {
   if (test_provider == NULL) {
     return -1;
   }
-  strncpy(test_content.data, argc > 2 ? argv[2] : "Hello world", sizeof(test_content.data));
+  strncpy(test_content.data, argc > 1 ? argv[1] : "Hello world", sizeof(test_content.data));
 
   TIMESPEC_SECONDS_INIT(&timeout, 1);
   while (true) {

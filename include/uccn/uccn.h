@@ -42,15 +42,15 @@ struct uccn_resource_s
 struct uccn_record_typesupport_s;
 
 typedef void *(*uccn_record_allocate_fn)(
-    struct uccn_record_typesupport_s * ts);
+    const struct uccn_record_typesupport_s * ts);
 
 typedef ssize_t (*uccn_record_serialize_fn)(
-    struct uccn_record_typesupport_s * ts,
+    const struct uccn_record_typesupport_s * ts,
     const void * content,
     struct buffer_head_s * blob);
 
 typedef ssize_t (*uccn_record_deserialize_fn)(
-    struct uccn_record_typesupport_s * ts,
+    const struct uccn_record_typesupport_s * ts,
     const struct buffer_head_s * blob,
     void * content);
 
@@ -64,7 +64,7 @@ struct uccn_record_typesupport_s
 struct uccn_record_s
 {
   struct uccn_resource_s base;
-  struct uccn_record_typesupport_s * ts;
+  const struct uccn_record_typesupport_s * ts;
 };
 
 struct uccn_peer_s
@@ -165,7 +165,7 @@ int uccn_node_init(struct uccn_node_s * node, const char * name,
 void uccn_resource_init(struct uccn_resource_s * resource, const char * path);
 
 void uccn_record_init(struct uccn_record_s * record, const char * path,
-                      struct uccn_record_typesupport_s * ts);
+                      const struct uccn_record_typesupport_s * ts);
 
 struct uccn_content_tracker_s * uccn_track(struct uccn_node_s * node,
                                            struct uccn_resource_s * resource,

@@ -3,18 +3,17 @@
 #include "uccn/uccn.h"
 #include "mpack/mpack.h"
 
-static void *simple_record_allocate(struct uccn_record_typesupport_s * ts) {
+static void *simple_record_allocate(const struct uccn_record_typesupport_s * ts) {
   static struct simple_record_data_s buffer;
   (void)ts;
   return &buffer;
 }
 
-static ssize_t simple_record_serialize(struct uccn_record_typesupport_s * ts,
-                                       const void * type_erased_content,
+static ssize_t simple_record_serialize(const struct uccn_record_typesupport_s * ts,
+                                       const struct simple_record_data_s * content,
                                        struct buffer_head_s * blob) {
   mpack_writer_t writer;
-  struct simple_record_data_s * content =
-    (struct simple_record_data_s *)type_erased_content;
+  (void)ts;
   mpack_writer_init(&writer, blob->data, blob->size);
   mpack_write_cstr(&writer, content->data);
   blob->length = mpack_writer_buffer_used(&writer);
@@ -24,12 +23,11 @@ static ssize_t simple_record_serialize(struct uccn_record_typesupport_s * ts,
   return blob->length;
 }
 
-static ssize_t simple_record_deserialize(struct uccn_record_typesupport_s * ts,
+static ssize_t simple_record_deserialize(const struct uccn_record_typesupport_s * ts,
                                          const struct buffer_head_s * blob,
-                                         void * type_erased_content) {
+                                         struct simple_record_data_s * content) {
   mpack_reader_t reader;
-  struct simple_record_data_s * content =
-    (struct simple_record_data_s *)type_erased_content;
+  (void)ts;
   mpack_reader_init_data(&reader, blob->data, blob->length);
   mpack_expect_cstr(&reader, content->data, sizeof(content->data));
   if (mpack_reader_destroy(&reader) != mpack_ok) {

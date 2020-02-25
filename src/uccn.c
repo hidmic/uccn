@@ -267,7 +267,7 @@ int uccn_post(struct uccn_content_provider_s * provider, const void * content)
       nbytes = sendto(node->socket, packet->data, packet->length, 0,
                       (struct sockaddr *)&peer->address,
                       sizeof(peer->address));
-      assert(nbytes == packet->length || nbytes < 0);
+      assert(nbytes < 0 || (size_t)nbytes == packet->length);
       if (nbytes < 0) {
         uccnwarn(SYSTEM_ERR_FROM(__LINE__ - 3, "Failed to send '%s' content", resource->path));
         continue;
@@ -283,7 +283,7 @@ int uccn_post(struct uccn_content_provider_s * provider, const void * content)
 struct uccn_peer_s *
 uccn_register_peer(struct uccn_node_s * node, struct sockaddr_in * address)
 {
-  size_t i, size;
+  size_t i;
   struct timespec current_time;
   struct uccn_peer_s * peer;
 
@@ -383,7 +383,7 @@ static ssize_t generic_record_unpack(struct uccn_record_s * record,
 }
 
 void uccn_record_init(struct uccn_record_s * record, const char * path,
-                      struct uccn_record_typesupport_s * ts)
+                      const struct uccn_record_typesupport_s * ts)
 {
   assert(record != NULL);
   assert(path != NULL);
@@ -500,7 +500,7 @@ int uccn_assert_liveliness(struct uccn_node_s * node, struct timespec * next_dea
       nbytes = sendto(node->socket, outgoing_packet->data, outgoing_packet->length,
                       0, (struct sockaddr *)&peer->address,
                       sizeof(peer->address));
-      assert(nbytes == outgoing_packet->length || nbytes < 0);
+      assert(nbytes < 0 || (size_t)nbytes == outgoing_packet->length);
       if (nbytes < 0) {
         uccnerr(SYSTEM_ERR_FROM(__LINE__ - 3, "Failed to send keepalive packet"));
         ret = nbytes;
@@ -535,7 +535,7 @@ int uccn_discover_peers(struct uccn_node_s * node)
   nbytes = sendto(node->socket, outgoing_packet->data, outgoing_packet->length,
                   0, (struct sockaddr *)&node->broadcast_address,
                   sizeof(node->broadcast_address));
-  assert(nbytes == outgoing_packet->length || nbytes < 0);
+  assert(nbytes < 0 || (size_t)nbytes == outgoing_packet->length);
   if (nbytes < 0) {
     uccnerr(SYSTEM_ERR_FROM(__LINE__ - 3, "Failed to send discovery packet"));
     ret = nbytes;
@@ -632,7 +632,7 @@ int uccn_process_incoming(struct uccn_node_s * node,
     nbytes = sendto(
         node->socket, outgoing_packet->data, outgoing_packet->length, 0,
         (struct sockaddr *)&peer->address, sizeof(peer->address));
-    assert(nbytes == outgoing_packet->length || nbytes < 0);
+    assert(nbytes < 0 || (size_t)nbytes == outgoing_packet->length);
     if (nbytes < 0) {
       uccnerr(SYSTEM_ERR_FROM(__LINE__ - 3, "Failed to send packet"));
       return nbytes;
@@ -645,7 +645,7 @@ int uccn_process_incoming(struct uccn_node_s * node,
 int uccn_spin(struct uccn_node_s * node, struct timespec * timeout)
 {
   fd_set rfds;
-  int nfds, ret = 0, sret = 0;
+  int nfds, ret = 0;
   size_t num_active_trackers;
   struct timespec current_time, next_deadline;
   struct timespec next_probe_time;
