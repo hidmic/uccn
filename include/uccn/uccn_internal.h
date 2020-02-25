@@ -18,6 +18,11 @@
   (((a)->sin_addr.s_addr == (b)->sin_addr.s_addr) &&  \
    ((a)->sin_port == (b)->sin_port))
 
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
 int uccn_prepare_keepalive_packet(struct uccn_node_s * node,
                                   struct buffer_head_s * packet);
 
@@ -80,5 +85,9 @@ int uccn_process_packet(struct uccn_node_s * node,
                         struct uccn_peer_s * peer,
                         struct buffer_head_s * incoming_packet,
                         struct buffer_head_s * outgoing_packet);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif  // UCCN_UCCN_INTERNAL_H_

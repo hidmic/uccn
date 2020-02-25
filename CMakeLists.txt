@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(uccn C)
+project(uccn)
 
 include_directories(include vendor)
 
@@ -15,4 +15,6 @@ add_library(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} mpack)
 
-add_subdirectory(examples)
+if (BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()

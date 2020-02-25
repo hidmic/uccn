@@ -12,6 +12,11 @@
 
 #define TIMESPEC_ISFINITE(tp) ((tp)->tv_sec >= 0)
 
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
 static inline int timespec_cmp(struct timespec * a, struct timespec * b) {
   if (a->tv_sec < 0 && b->tv_sec >= 0) return 1;
   if (a->tv_sec >= 0 && b->tv_sec < 0) return -1;
@@ -52,5 +57,9 @@ static inline void timespec_diff(struct timespec * a, struct timespec * b) {
     a->tv_sec -= 1;
   }
 }
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif // UCCN_COMMON_TIME_H_

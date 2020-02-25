@@ -154,6 +154,11 @@ struct uccn_node_s
   struct eventfd_s stop_event;
 };
 
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
 int uccn_node_init(struct uccn_node_s * node, const char * name,
                    struct uccn_network_s * network);
 
@@ -178,5 +183,9 @@ int uccn_spin(struct uccn_node_s * node, struct timespec * timeout);
 int uccn_stop(struct uccn_node_s * node);
 
 int uccn_node_fini(struct uccn_node_s * node);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif // UCCN_UCCN_H_

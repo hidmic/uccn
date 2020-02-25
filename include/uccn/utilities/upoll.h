@@ -14,6 +14,15 @@ struct upoll_s {
   struct timespec next_poll_time;
 };
 
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
 int upoll(struct upoll_s * polls, size_t npolls, struct timespec * next_poll_time);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif // UCCN_UTILITIES_UPOLL_H_
