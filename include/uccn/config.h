@@ -78,7 +78,11 @@
 #endif
 
 #if CONFIG_UCCN_ENDPOINT_PROBE_TIMEOUT_MS >= CONFIG_UCCN_PEER_DISCOVERY_PERIOD_MS
-#define "uCCN must probe for endpoint state faster than it discovers peers"
+#error "uCCN must probe for endpoint state faster than it discovers peers"
+#endif
+
+#ifndef CONFIG_UCCN_MULTITHREADED
+#define CONFIG_UCCN_MULTITHREADED 1
 #endif
 
 #ifndef CONFIG_UCCN_LOGGING

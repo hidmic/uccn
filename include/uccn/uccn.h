@@ -1,6 +1,8 @@
 #ifndef UCCN_UCCN_H_
 #define UCCN_UCCN_H_
 
+#include "uccn/config.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -9,10 +11,10 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#if CONFIG_UCCN_MULTITHREADED
+#include <pthread.h>
+#endif
 #include <sys/types.h>
-#include <sys/socket.h>
-
-#include "uccn/config.h"
 
 #include "uccn/common/buffer.h"
 #include "uccn/common/time.h"
@@ -156,6 +158,10 @@ struct uccn_node_s
     providers[CONFIG_UCCN_MAX_NUM_PROVIDERS];
   size_t num_providers;
 
+#if CONFIG_UCCN_MULTITHREADED
+  pthread_mutex_t mutex;
+#endif
+
   struct eventfd_s stop_event;
 };
 
@@ -182,8 +188,6 @@ struct uccn_content_provider_s * uccn_advertise(struct uccn_node_s * node,
                                                 const struct uccn_resource_s * resource);
 
 int uccn_post(struct uccn_content_provider_s * provider, const void * content);
-
-struct uccn_peer_s * uccn_register_peer(struct uccn_node_s * node, struct sockaddr_in * address);
 
 int uccn_spin(struct uccn_node_s * node, const struct timespec * timeout);
 

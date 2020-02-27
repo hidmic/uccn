@@ -1,6 +1,8 @@
 #ifndef UCCN_UCCN_HPP_
 #define UCCN_UCCN_HPP_
 
+#include "uccn/uccn.h"
+
 #include <time.h>
 
 #include <cassert>
@@ -12,8 +14,10 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include "uccn/uccn.h"
+#if CONFIG_UCCN_MULTITHREADED
+#include <thread>
+#include <mutex>
+#endif
 
 namespace uccn {
 
@@ -266,6 +270,9 @@ class node final {
 
  private:
   void generic_track(const resource & resource, std::function<void (void *)> track) {
+#if CONFIG_UCCN_MULTITHREADED
+    std::lock_guard<std::mutex> lock(mutex_);
+#endif
     const uccn_resource_s * c_resource = resource.c_resource();
     generic_track_cpp_functions_[c_resource->hash] = track;
     uccn_content_tracker_s * c_tracker = uccn_track(
@@ -286,6 +293,9 @@ class node final {
   std::unordered_map<uint32_t, std::function<void(void *)>> generic_track_cpp_functions_;
 
   uccn_node_s c_node_;
+#if CONFIG_UCCN_MULTITHREADED
+  std::mutex mutex_;
+#endif
 };
 
 }  // namespace uccn

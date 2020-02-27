@@ -30,10 +30,11 @@ void sigint_handler(int signum) {
 }
 
 int main(int argc, char * argv[]) {
-#ifdef CONFIG_UCCN_LOGGING
+#if CONFIG_UCCN_LOGGING
   openlog(argv[0], LOG_PID | LOG_PERROR, LOG_USER);
-#endif
   setlogmask(LOG_UPTO(LOG_INFO));
+#endif
+
 
   using namespace std::literals::chrono_literals;
   sighandler_t old_sigint_handler = signal(SIGINT, sigint_handler);
@@ -67,7 +68,7 @@ int main(int argc, char * argv[]) {
   }
   signal(SIGINT, old_sigint_handler);
 
-#ifdef CONFIG_UCCN_LOGGING
+#if CONFIG_UCCN_LOGGING
   closelog();
 #endif
 

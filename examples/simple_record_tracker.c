@@ -31,10 +31,10 @@ int main(int argc, char * argv[]) {
   sighandler_t old_sigint_handler;
 
   (void)argc;
-#ifdef CONFIG_UCCN_LOGGING
+#if CONFIG_UCCN_LOGGING
   openlog(argv[0], LOG_PID | LOG_PERROR, LOG_USER);
+  //setlogmask(LOG_UPTO(LOG_INFO));
 #endif
-  setlogmask(LOG_UPTO(LOG_INFO));
 
   inet_aton("127.0.0.1", &network.inetaddr);
   inet_aton("255.0.0.0", &network.netmaskaddr);
@@ -66,7 +66,7 @@ int main(int argc, char * argv[]) {
     perror("Failed to finalize 'tracker' node.\n");
   }
 
-#ifdef CONFIG_UCCN_LOGGING
+#if CONFIG_UCCN_LOGGING
   closelog();
 #endif
 

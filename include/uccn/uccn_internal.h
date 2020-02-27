@@ -32,6 +32,9 @@ int uccn_prepare_discovery_packet(struct uccn_node_s * node,
 int uccn_assert_liveliness(struct uccn_node_s * node,
                            struct timespec * next_deadline);
 
+struct uccn_peer_s * uccn_register_peer(struct uccn_node_s * node,
+                                        struct sockaddr_in * address);
+
 int uccn_discover_peers(struct uccn_node_s * node);
 
 int uccn_process_incoming_unicast(struct uccn_node_s * node);

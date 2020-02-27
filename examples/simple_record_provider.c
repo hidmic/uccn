@@ -33,7 +33,7 @@ int main(int argc, char * argv[]) {
   struct uccn_content_provider_s * test_provider;
   sighandler_t old_sigint_handler;
 
-#ifdef CONFIG_UCCN_LOGGING
+#if CONFIG_UCCN_LOGGING
   openlog(argv[0], LOG_PID | LOG_PERROR, LOG_USER);
   setlogmask(LOG_UPTO(LOG_INFO));
 #endif
@@ -80,7 +80,7 @@ int main(int argc, char * argv[]) {
   if (ret < 0) {
     perror("Failed to finalize 'provider' node.\n");
   }
-#ifdef CONFIG_UCCN_LOGGING
+#if CONFIG_UCCN_LOGGING
   closelog();
 #endif
 

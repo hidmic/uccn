@@ -5,15 +5,18 @@
 
 int eventfd_init(struct eventfd_s * ev) {
   int ret;
-  if ((ret = pipe(ev->fd)) == 0) {
-    ret = fcntl(ev->fd[0], F_SETFD, O_NONBLOCK);
+  if ((ret = pipe(ev->fd)) < 0) {
+    return ret;
   }
-  return ret;
+  if ((ret = fcntl(ev->fd[1], F_GETFL, 0)) < 0) {
+    return ret;
+  }
+  return fcntl(ev->fd[1], F_SETFL, ret | O_NONBLOCK);
 }
 
 int eventfd_set(struct eventfd_s * ev)
 {
-  return write(ev->fd[1], "\0", 1);
+  return write(ev->fd[1], "\n", 1);
 }
 
 int eventfd_clear(struct eventfd_s * ev)
