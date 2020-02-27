@@ -107,7 +107,7 @@ int uccn_node_init(struct uccn_node_s * node, const struct uccn_network_s * netw
   node->broadcast_address.sin_family = AF_INET;
   node->broadcast_address.sin_port = htons(CONFIG_UCCN_PORT);
   node->broadcast_address.sin_addr.s_addr =
-      network->inetaddr.s_addr | ~(network->netmaskaddr.s_addr);
+      network->inetaddr.s_addr | ~(network->netmask.s_addr);
 
   strncpy(node->name, name, CONFIG_UCCN_MAX_NODE_NAME_SIZE);
 

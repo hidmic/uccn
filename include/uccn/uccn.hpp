@@ -98,14 +98,21 @@ public:
 
 class network final {
  public:
-  network(const std::string & ipaddress,
+  network(const struct in_addr & inetaddr,
+          const struct in_addr & netmask)
+  {
+    c_network_.inetaddr = inetaddr;
+    c_network_.netmask = netmask;
+  }
+
+  network(const std::string & inetaddr,
           const std::string & netmask) {
-    if (!inet_aton(ipaddress.c_str(), &c_network_.inetaddr)) {
+    if (!inet_aton(inetaddr.c_str(), &c_network_.inetaddr)) {
       std::stringstream message;
-      message << ipaddress << " is not a valid IP address";
+      message << inetaddr << " is not a valid IP address";
       throw std::runtime_error(message.str());
     }
-    if (!inet_aton(netmask.c_str(), &c_network_.netmaskaddr)) {
+    if (!inet_aton(netmask.c_str(), &c_network_.netmask)) {
       std::stringstream message;
       message << netmask << " is not a valid IP address";
       throw std::runtime_error(message.str());

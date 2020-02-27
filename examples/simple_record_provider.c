@@ -39,7 +39,7 @@ int main(int argc, char * argv[]) {
 #endif
 
   inet_aton("127.0.0.1", &network.inetaddr);
-  inet_aton("255.0.0.0", &network.netmaskaddr);
+  inet_aton("255.0.0.0", &network.netmask);
 
   if (uccn_node_init(&node, &network, "provider") != 0) {
     perror("Failed to initialize 'provider' node.\n");

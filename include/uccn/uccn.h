@@ -119,7 +119,7 @@ struct uccn_content_provider_s
 struct uccn_network_s
 {
   struct in_addr inetaddr;
-  struct in_addr netmaskaddr;
+  struct in_addr netmask;
 };
 
 struct uccn_node_s
