@@ -21,22 +21,26 @@
 struct uccn_resource_s;
 
 typedef ssize_t (*uccn_content_pack_fn)(
-    struct uccn_resource_s * resource,
+    const struct uccn_resource_s * resource,
     const void * content,
     struct buffer_head_s ** packet);
 
 typedef ssize_t (*uccn_content_unpack_fn)(
-    struct uccn_resource_s * resource,
+    const struct uccn_resource_s * resource,
     const struct buffer_head_s * packet,
     void ** content);
 
 struct uccn_resource_s
 {
-  const char *path;
+  char path[CONFIG_UCCN_MAX_RESOURCE_PATH_SIZE];
   uint32_t hash;
 
   uccn_content_unpack_fn unpack;
   uccn_content_pack_fn pack;
+};
+
+struct uccn_raw_data_s {
+  struct uccn_resource_s base;
 };
 
 struct uccn_record_typesupport_s;
@@ -71,7 +75,7 @@ struct uccn_peer_s
 {
   struct sockaddr_in address;
   char location[INET_ADDRSTRLEN + 7];
-  char name[CONFIG_UCCN_MAX_NODENAME_SIZE];
+  char name[CONFIG_UCCN_MAX_NODE_NAME_SIZE];
 
   bool alive;
   struct {
@@ -87,7 +91,7 @@ struct uccn_node_s;
 struct uccn_content_endpoint_s
 {
   struct uccn_node_s * node;
-  struct uccn_resource_s * resource;
+  const struct uccn_resource_s * resource;
   struct uccn_peer_s * peers[CONFIG_UCCN_MAX_NUM_PEERS];
   size_t num_peers;
 };
@@ -102,6 +106,7 @@ struct uccn_content_tracker_s
 {
   struct uccn_content_endpoint_s endpoint;
   uccn_content_track_fn track;
+  void * arg;
 };
 
 struct uccn_content_provider_s
@@ -124,7 +129,7 @@ struct uccn_node_s
   struct sockaddr_in broadcast_address;
 
   char location[INET_ADDRSTRLEN + 7];
-  char name[CONFIG_UCCN_MAX_NODENAME_SIZE];
+  char name[CONFIG_UCCN_MAX_NODE_NAME_SIZE];
 
   struct {
     struct buffer_head_s head;
@@ -159,26 +164,28 @@ extern "C"
 {
 #endif
 
-int uccn_node_init(struct uccn_node_s * node, const char * name,
-                   struct uccn_network_s * network);
+int uccn_node_init(struct uccn_node_s * node,
+                   const struct uccn_network_s * network,
+                   const char * name);
 
-void uccn_resource_init(struct uccn_resource_s * resource, const char * path);
+void uccn_raw_data_init(struct uccn_raw_data_s * raw_data, const char * path);
 
 void uccn_record_init(struct uccn_record_s * record, const char * path,
                       const struct uccn_record_typesupport_s * ts);
 
 struct uccn_content_tracker_s * uccn_track(struct uccn_node_s * node,
-                                           struct uccn_resource_s * resource,
-                                           uccn_content_track_fn track);
+                                           const struct uccn_resource_s * resource,
+                                           const uccn_content_track_fn track,
+                                           void * arg);
 
 struct uccn_content_provider_s * uccn_advertise(struct uccn_node_s * node,
-                                                struct uccn_resource_s * resource);
+                                                const struct uccn_resource_s * resource);
 
 int uccn_post(struct uccn_content_provider_s * provider, const void * content);
 
 struct uccn_peer_s * uccn_register_peer(struct uccn_node_s * node, struct sockaddr_in * address);
 
-int uccn_spin(struct uccn_node_s * node, struct timespec * timeout);
+int uccn_spin(struct uccn_node_s * node, const struct timespec * timeout);
 
 int uccn_stop(struct uccn_node_s * node);
 

@@ -35,7 +35,7 @@ static struct timespec g_uccn_endpoint_probe_timeout = {
 };
 
 
-int uccn_node_init(struct uccn_node_s * node, const char * name, struct uccn_network_s * network)
+int uccn_node_init(struct uccn_node_s * node, const struct uccn_network_s * network, const char * name)
 {
   int ret, opt = 1;
   struct sockaddr_in address;
@@ -114,7 +114,7 @@ int uccn_node_init(struct uccn_node_s * node, const char * name, struct uccn_net
   node->broadcast_address.sin_addr.s_addr =
       network->inetaddr.s_addr | ~(network->netmaskaddr.s_addr);
 
-  strncpy(node->name, name, CONFIG_UCCN_MAX_NODENAME_SIZE);
+  strncpy(node->name, name, CONFIG_UCCN_MAX_NODE_NAME_SIZE);
 
   inet_ntop(AF_INET, &node->address.sin_addr,
             node->location, sizeof(node->location));
@@ -149,7 +149,9 @@ fail:
 }
 
 struct uccn_content_tracker_s *
-uccn_track(struct uccn_node_s * node, struct uccn_resource_s * resource, uccn_content_track_fn track)
+uccn_track(struct uccn_node_s * node,
+           const struct uccn_resource_s * resource,
+           const uccn_content_track_fn track, void * arg)
 {
   size_t i;
 
@@ -161,6 +163,7 @@ uccn_track(struct uccn_node_s * node, struct uccn_resource_s * resource, uccn_co
     if (endpoint->resource == resource) {
       uccndbg("Updating existing tracker for '%s' resource", resource->path);
       tracker->track = track;
+      tracker->arg = arg;
       return tracker;
     }
     if (endpoint->resource->hash == resource->hash) {
@@ -175,11 +178,12 @@ uccn_track(struct uccn_node_s * node, struct uccn_resource_s * resource, uccn_co
   endpoint->resource = resource;
   endpoint->num_peers = 0;
   tracker->track = track;
+  tracker->arg = arg;
   return tracker;
 }
 
 struct uccn_content_provider_s *
-uccn_advertise(struct uccn_node_s * node, struct uccn_resource_s * resource)
+uccn_advertise(struct uccn_node_s * node, const struct uccn_resource_s * resource)
 {
   size_t i;
   struct uccn_content_provider_s * provider;
@@ -224,7 +228,7 @@ int uccn_post(struct uccn_content_provider_s * provider, const void * content)
   struct uccn_content_endpoint_s * endpoint =
       (struct uccn_content_endpoint_s *)provider;
   struct uccn_node_s * node = endpoint->node;
-  struct uccn_resource_s * resource = endpoint->resource;
+  const struct uccn_resource_s * resource = endpoint->resource;
 
   ret = 0;
   if (endpoint->num_peers > 0) {
@@ -314,7 +318,7 @@ uccn_register_peer(struct uccn_node_s * node, struct sockaddr_in * address)
   peer = &node->peers[node->num_peers++];
   peer->address = *address;
 
-  strncpy(peer->name, "anon", CONFIG_UCCN_MAX_NODENAME_SIZE);
+  strncpy(peer->name, "anon", CONFIG_UCCN_MAX_NODE_NAME_SIZE);
   inet_ntop(AF_INET, &address->sin_addr, peer->location, sizeof(peer->location));
   snprintf(&peer->location[strlen(peer->location)],
            sizeof(peer->location) - strlen(peer->location),
@@ -344,13 +348,13 @@ void uccn_resource_init(struct uccn_resource_s * resource, const char * path)
 {
   assert(resource != NULL);
   assert(path != NULL);
-  resource->path = path;
+  strncpy(resource->path, path, CONFIG_UCCN_MAX_RESOURCE_PATH_SIZE);
   resource->hash = djb2(path);
   resource->pack = (uccn_content_pack_fn)content_passthrough;
   resource->unpack = (uccn_content_unpack_fn)content_passthrough;
 }
 
-static ssize_t generic_record_pack(struct uccn_record_s * record,
+static ssize_t generic_record_pack(const struct uccn_record_s * record,
                                    const void * content,
                                    struct buffer_head_s ** blob)
 {
@@ -365,7 +369,7 @@ static ssize_t generic_record_pack(struct uccn_record_s * record,
   return record->ts->serialize(record->ts, content, *blob);
 }
 
-static ssize_t generic_record_unpack(struct uccn_record_s * record,
+static ssize_t generic_record_unpack(const struct uccn_record_s * record,
                                      const struct buffer_head_s * blob,
                                      void ** content)
 {
@@ -642,12 +646,14 @@ int uccn_process_incoming(struct uccn_node_s * node,
   return 0;
 }
 
-int uccn_spin(struct uccn_node_s * node, struct timespec * timeout)
+int uccn_spin(struct uccn_node_s * node, const struct timespec * timeout)
 {
   fd_set rfds;
   int nfds, ret = 0;
   size_t num_active_trackers;
-  struct timespec current_time, next_deadline;
+  struct timespec stimeout;
+  struct timespec current_time;
+  struct timespec next_deadline;
   struct timespec next_probe_time;
   struct timespec next_assert_time;
   struct timespec next_discovery_time;
@@ -735,6 +741,7 @@ int uccn_spin(struct uccn_node_s * node, struct timespec * timeout)
       uccnerr(SYSTEM_ERR_FROM(__LINE__ - 1, "Failed to get current time"));
       break;
     }
+
     if (timespec_cmp(&current_time, &timeout_time) >= 0) {
       break;
     }
@@ -748,17 +755,26 @@ int uccn_spin(struct uccn_node_s * node, struct timespec * timeout)
     if (timespec_cmp(&next_deadline, &next_discovery_time) > 0) {
       next_deadline = next_discovery_time;
     }
-    timespec_diff(&next_deadline, &current_time);
     assert(TIMESPEC_ISFINITE(&next_deadline));
 
-    FD_ZERO(&rfds);
-    FD_SET(node->socket, &rfds);
-    FD_SET(node->broadcast_socket, &rfds);
-    FD_SET(eventfd_fileno(&node->stop_event), &rfds);
+    do {
+      FD_ZERO(&rfds);
+      FD_SET(node->socket, &rfds);
+      FD_SET(node->broadcast_socket, &rfds);
+      FD_SET(eventfd_fileno(&node->stop_event), &rfds);
 
-    ret = pselect(nfds, &rfds, NULL, NULL, &next_deadline, NULL);
+      if ((ret = clock_gettime(CLOCK_MONOTONIC, &current_time)) != 0) {
+        uccnerr(SYSTEM_ERR_FROM(__LINE__ - 1, "Failed to get current time"));
+        break;
+      }
+
+      stimeout = next_deadline;
+      timespec_diff(&stimeout, &current_time);
+      ret = pselect(nfds, &rfds, NULL, NULL, &stimeout, NULL);
+    } while(ret < 0 && errno == EINTR);
+
     if (ret < 0) {
-      uccnerr(SYSTEM_ERR_FROM(__LINE__ - 2, "Failed to poll"));
+      uccnerr(SYSTEM_ERR_FROM(__LINE__ - 3, "Failed to poll sockets"));
     }
   } while (ret >= 0);
 
@@ -1067,7 +1083,7 @@ int uccn_process_link_group(struct uccn_node_s * node, struct uccn_peer_s * peer
       data_code = mpack_expect_u8(reader);
       switch(data_code) {
         case UCCN_NODE_NAME:
-          mpack_expect_cstr(reader, peer->name, CONFIG_UCCN_MAX_NODENAME_SIZE);
+          mpack_expect_cstr(reader, peer->name, CONFIG_UCCN_MAX_NODE_NAME_SIZE);
           break;
         case UCCN_PROVIDED_ARRAY:
           if (mpack_expect_array_max_or_nil(reader, CONFIG_UCCN_MAX_NUM_RESOURCES, &array_size)) {

@@ -1,17 +1,31 @@
 add_compile_options(-Wall -Wextra -Werror)
 
-add_library(simple_resources simple_record.c)
+# C examples
 
-target_link_libraries(simple_resources ${PROJECT_NAME} mpack)
+add_library(example_resources_c simple_data.c)
 
-add_executable(simple_record_provider
-  simple_record_provider.c
-)
+target_link_libraries(example_resources_c ${PROJECT_NAME} mpack)
 
-target_link_libraries(simple_record_provider ${PROJECT_NAME} simple_resources)
 
-add_executable(simple_record_tracker
-  simple_record_tracker.c
-)
+add_executable(simple_record_provider_c simple_record_provider.c)
 
-target_link_libraries(simple_record_tracker ${PROJECT_NAME} simple_resources)
+target_link_libraries(simple_record_provider_c ${PROJECT_NAME} example_resources_c)
+
+add_executable(simple_record_tracker_c simple_record_tracker.c)
+
+target_link_libraries(simple_record_tracker_c ${PROJECT_NAME} example_resources_c)
+
+# C++ examples
+
+add_library(example_resources_cpp simple_data.cpp)
+
+target_link_libraries(example_resources_cpp ${PROJECT_NAME} mpack)
+
+
+add_executable(simple_record_provider_cpp simple_record_provider.cpp)
+
+target_link_libraries(simple_record_provider_cpp ${PROJECT_NAME} example_resources_cpp)
+
+add_executable(simple_record_tracker_cpp simple_record_tracker.cpp)
+
+target_link_libraries(simple_record_tracker_cpp ${PROJECT_NAME} example_resources_cpp)

@@ -17,7 +17,7 @@ extern "C"
 {
 #endif
 
-static inline int timespec_cmp(struct timespec * a, struct timespec * b) {
+static inline int timespec_cmp(const struct timespec * a, const struct timespec * b) {
   if (a->tv_sec < 0 && b->tv_sec >= 0) return 1;
   if (a->tv_sec >= 0 && b->tv_sec < 0) return -1;
   if (a->tv_sec < 0 && b->tv_sec < 0) return 0;
@@ -29,7 +29,7 @@ static inline int timespec_cmp(struct timespec * a, struct timespec * b) {
   return 0;
 }
 
-static inline void timespec_add(struct timespec * a, struct timespec * b) {
+static inline void timespec_add(struct timespec * a, const struct timespec * b) {
   if (a->tv_sec < 0 || b->tv_sec < 0) {
     TIMESPEC_INF_INIT(a);
     return;
@@ -40,7 +40,7 @@ static inline void timespec_add(struct timespec * a, struct timespec * b) {
   a->tv_nsec = a->tv_nsec % 1000000000L;
 }
 
-static inline void timespec_diff(struct timespec * a, struct timespec * b) {
+static inline void timespec_diff(struct timespec * a, const struct timespec * b) {
   if (a->tv_sec < 0 || b->tv_sec < 0) {
     TIMESPEC_INF_INIT(a);
     return;
