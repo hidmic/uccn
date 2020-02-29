@@ -23,6 +23,11 @@ namespace uccn {
 
 class raw_provider final {
  public:
+  raw_provider() = default;
+
+  raw_provider(raw_provider &&) = default;
+  raw_provider & operator=(raw_provider &&) = default;
+
   raw_provider(struct uccn_content_provider_s * c_provider)
     : c_provider_(c_provider)
   {
@@ -31,6 +36,9 @@ class raw_provider final {
 
   int post(const buffer_head_s * raw_buffer)
   {
+    if (!c_provider_) {
+      throw std::logic_error("uninitialized raw content provider");
+    }
     int ret = uccn_post(c_provider_, raw_buffer);
     if (ret < 0) {
       std::stringstream message;
@@ -61,13 +69,18 @@ class raw_provider final {
   }
 
  private:
-  uccn_content_provider_s * c_provider_;
+  uccn_content_provider_s * c_provider_{nullptr};
 };
 
 template<typename ContentT>
 class record_provider final
 {
 public:
+  record_provider() = default;
+
+  record_provider(record_provider &&) = default;
+  record_provider & operator=(record_provider &&) = default;
+
   record_provider(struct uccn_content_provider_s * c_provider)
     : c_provider_(c_provider)
   {
@@ -76,6 +89,9 @@ public:
 
   int post(const ContentT * content)
   {
+    if (!c_provider_) {
+      throw std::logic_error("uninitialized record provider");
+    }
     int ret = uccn_post(c_provider_, content);
     if (ret < 0) {
       std::stringstream message;
@@ -93,7 +109,7 @@ public:
   }
 
  private:
-  uccn_content_provider_s * c_provider_;
+  uccn_content_provider_s * c_provider_{nullptr};
 };
 
 class network final {
