@@ -8,7 +8,8 @@
 
 #define TIMESPEC_ZERO_INIT(tp) (tp)->tv_sec = 0, (tp)->tv_nsec = 0
 #define TIMESPEC_INF_INIT(tp) (tp)->tv_sec = -1, (tp)->tv_nsec = -1
-#define TIMESPEC_SECONDS_INIT(tp, sec) (tp)->tv_sec = sec, (tp)->tv_nsec = 0
+#define TIMESPEC_SECONDS_INIT(tp, sec) (tp)->tv_sec = (sec), (tp)->tv_nsec = 0
+#define TIMESPEC_MICROSECONDS_INIT(tp, usec) (tp)->tv_sec = 0, (tp)->tv_nsec = 1000 * (usec)
 
 #define TIMESPEC_ISFINITE(tp) ((tp)->tv_sec >= 0)
 
