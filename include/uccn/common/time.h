@@ -11,7 +11,8 @@
 #define TIMESPEC_SECONDS_INIT(tp, sec) (tp)->tv_sec = (sec), (tp)->tv_nsec = 0
 #define TIMESPEC_MICROSECONDS_INIT(tp, usec) (tp)->tv_sec = 0, (tp)->tv_nsec = 1000 * (usec)
 
-#define TIMESPEC_ISFINITE(tp) ((tp)->tv_sec >= 0)
+#define TIMESPEC_ISZERO(tp) ((tp)->tv_sec == 0 && (tp)->tv_nsec == 0)
+#define TIMESPEC_ISFINITE(tp) ((tp)->tv_sec >= 0 && (tp)->tv_nsec >= 0)
 
 #if defined(__cplusplus)
 extern "C"

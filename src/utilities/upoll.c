@@ -18,10 +18,13 @@ int upoll(struct upoll_s * upolls, size_t npolls, struct timespec * next_poll_ti
     }
     TIMESPEC_INF_INIT(next_poll_time);
     for (i = 0; i < npolls; ++i) {
-      if (timespec_cmp(&upolls[i].next_poll_time, &current_time) >= 0) {
+      if (timespec_cmp(&current_time, &upolls[i].next_poll_time) >= 0) {
         upolls[i].poll(upolls[i].arg);
 
-        timespec_add(&upolls[i].next_poll_time, &current_time);
+        if (TIMESPEC_ISZERO(&upolls[i].next_poll_time)) {
+          upolls[i].next_poll_time = current_time;
+        }
+        timespec_add(&upolls[i].next_poll_time, &upolls[i].polling_period);
       }
       if (timespec_cmp(next_poll_time, &upolls[i].next_poll_time) > 0) {
         *next_poll_time = upolls[i].next_poll_time;
