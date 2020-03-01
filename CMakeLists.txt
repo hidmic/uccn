@@ -6,7 +6,7 @@ add_subdirectory(vendor)
 
 add_library(${PROJECT_NAME}
   src/uccn.c
-  src/common/hash.c
+  src/common/crc32.c
   src/utilities/upoll.c
   src/utilities/eventfd.c
 )

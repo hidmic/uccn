@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "uccn/common/hash.h"
+#include "uccn/common/crc32.h"
 #include "uccn/common/logging.h"
 
 static const struct timespec g_uccn_liveliness_timeout = {
@@ -248,7 +248,6 @@ int uccn_post(struct uccn_content_provider_s * provider, const void * content)
   mpack_writer_t writer;
 
   struct uccn_peer_s * peer;
-  struct timespec new_liveliness_deadline;
 
   struct uccn_content_endpoint_s * endpoint =
       (struct uccn_content_endpoint_s *)provider;
@@ -257,11 +256,6 @@ int uccn_post(struct uccn_content_provider_s * provider, const void * content)
 
   ret = 0;
   if (endpoint->num_peers > 0) {
-    if ((ret = clock_gettime(CLOCK_MONOTONIC, &new_liveliness_deadline)) != 0) {
-      uccnerr(SYSTEM_ERR_FROM(__LINE__ - 1, "Failed to get current time"));
-      return ret;
-    }
-    timespec_add(&new_liveliness_deadline, &g_uccn_liveliness_assert_timeout);
 #if CONFIG_UCCN_MULTITHREADED
     ret = pthread_mutex_lock(&node->mutex);
     if (ret < 0) {
@@ -313,7 +307,11 @@ int uccn_post(struct uccn_content_provider_s * provider, const void * content)
         uccnwarn(SYSTEM_ERR_FROM(__LINE__ - 3, "Failed to send '%s' content", resource->path));
         continue;
       }
-      peer->liveliness.next_local_deadline = new_liveliness_deadline;
+      if ((ret = clock_gettime(CLOCK_MONOTONIC, &peer->liveliness.next_local_deadline)) != 0) {
+        uccnerr(SYSTEM_ERR_FROM(__LINE__ - 1, "Failed to get current time"));
+        return ret;
+      }
+      timespec_add(&peer->liveliness.next_local_deadline, &g_uccn_liveliness_assert_timeout);
       ++ret;
     }
 #if CONFIG_UCCN_MULTITHREADED
@@ -364,9 +362,11 @@ uccn_register_peer(struct uccn_node_s * node, struct sockaddr_in * address)
            ":%d", ntohs(address->sin_port));
 
   peer->alive = true;
-  peer->liveliness.next_local_deadline = current_time;
   peer->liveliness.next_remote_deadline = current_time;
   timespec_add(&peer->liveliness.next_remote_deadline, &g_uccn_liveliness_timeout);
+  TIMESPEC_ZERO_INIT(&peer->liveliness.next_local_deadline);
+  peer->provided_content_hash = 0;
+  peer->tracked_content_hash = 0;
   peer->num_links = 0;
   uccndbg("Peer %s@%s registered", peer->name, peer->location);
   return peer;
@@ -388,7 +388,7 @@ void uccn_resource_init(struct uccn_resource_s * resource, const char * path)
   assert(resource != NULL);
   assert(path != NULL);
   strncpy(resource->path, path, CONFIG_UCCN_MAX_RESOURCE_PATH_SIZE);
-  resource->hash = djb2(path);
+  resource->hash = crc32((const uint8_t *)path, strlen(path));
   resource->pack = (uccn_content_pack_fn)content_passthrough;
   resource->unpack = (uccn_content_unpack_fn)content_passthrough;
 }
@@ -521,10 +521,6 @@ int uccn_assert_liveliness(struct uccn_node_s * node, struct timespec * next_dea
   struct uccn_peer_s * peer;
   struct buffer_head_s * outgoing_packet;
 
-  if (next_deadline != NULL) {
-    TIMESPEC_INF_INIT(next_deadline);
-  }
-
   outgoing_packet = (struct buffer_head_s *)&node->outgoing_buffer;
   if ((ret = uccn_prepare_keepalive_packet(node, outgoing_packet)) < 0) {
     uccndbg(BACKTRACE_FROM(__LINE__ - 1));
@@ -536,10 +532,15 @@ int uccn_assert_liveliness(struct uccn_node_s * node, struct timespec * next_dea
     return ret;
   }
 
+  if (next_deadline != NULL) {
+    *next_deadline = current_time;
+    timespec_add(next_deadline, &g_uccn_liveliness_assert_timeout);
+  }
+
   for (i = 0; i < node->num_peers; ++i) {
     peer = &node->peers[i];
 
-    if (timespec_cmp(&peer->liveliness.next_local_deadline, &current_time) <= 0) {
+    if (timespec_cmp(&current_time, &peer->liveliness.next_local_deadline) >= 0) {
       nbytes = sendto(node->socket, outgoing_packet->data, outgoing_packet->length,
                       0, (struct sockaddr *)&peer->address,
                       sizeof(peer->address));
@@ -548,6 +549,9 @@ int uccn_assert_liveliness(struct uccn_node_s * node, struct timespec * next_dea
         uccnerr(SYSTEM_ERR_FROM(__LINE__ - 3, "Failed to send keepalive packet"));
         ret = nbytes;
         break;
+      }
+      if (TIMESPEC_ISZERO(&peer->liveliness.next_local_deadline)) {
+        peer->liveliness.next_local_deadline = current_time;
       }
       timespec_add(&peer->liveliness.next_local_deadline, &g_uccn_liveliness_assert_timeout);
     }
@@ -788,6 +792,7 @@ int uccn_spin_until(struct uccn_node_s * node, const struct timespec * timeout_t
 #endif
         break;
       }
+      assert(timespec_cmp(&next_assert_time, &current_time) > 0);
     }
 
     if (timespec_cmp(&current_time, &next_probe_time) >= 0) {
@@ -799,10 +804,11 @@ int uccn_spin_until(struct uccn_node_s * node, const struct timespec * timeout_t
 #endif
         break;
       }
+      assert(timespec_cmp(&next_probe_time, &current_time) > 0);
     }
 
-    if (num_active_trackers < node->num_trackers) {
-      if (timespec_cmp(&current_time, &next_discovery_time) >= 0) {
+    if (timespec_cmp(&current_time, &next_discovery_time) >= 0) {
+      if (num_active_trackers < node->num_trackers) {
         if ((ret = uccn_discover_peers(node)) < 0) {
           uccndbg(BACKTRACE_FROM(__LINE__ - 1));
 #if CONFIG_UCCN_MULTITHREADED
@@ -810,9 +816,11 @@ int uccn_spin_until(struct uccn_node_s * node, const struct timespec * timeout_t
 #endif
           break;
         }
-        timespec_add(&next_discovery_time, &g_uccn_peer_discovery_period);
       }
+      timespec_add(&next_discovery_time, &g_uccn_peer_discovery_period);
+      assert(timespec_cmp(&next_discovery_time, &current_time) > 0);
     }
+
 #if CONFIG_UCCN_MULTITHREADED
     assert(pthread_mutex_unlock(&node->mutex) == 0);
 #endif
@@ -1147,6 +1155,9 @@ int uccn_process_link_group(struct uccn_node_s * node, struct uccn_peer_s * peer
   uint8_t  data_code;
   uint32_t group_size, array_size;
 
+  uint32_t hashes[CONFIG_UCCN_MAX_NUM_RESOURCES];
+  uint32_t num_hashes = 0;
+
   uint32_t provided_hashes[CONFIG_UCCN_MAX_NUM_RESOURCES];
   uint32_t num_provided_hashes = 0;
 
@@ -1167,32 +1178,36 @@ int uccn_process_link_group(struct uccn_node_s * node, struct uccn_peer_s * peer
           break;
         case UCCN_PROVIDED_ARRAY:
           if (mpack_expect_array_max_or_nil(reader, CONFIG_UCCN_MAX_NUM_RESOURCES, &array_size)) {
-            if ((ret = uccn_unlink_trackers(node, peer)) < 0) {
-              uccndbg(BACKTRACE_FROM(__LINE__ - 1));
-              return ret;
-            }
             for (j = 0; j < array_size; ++j) {
               hash = mpack_expect_u32(reader);
               if (hash == 0) {
                 uccnerr(RUNTIME_ERR("Missing resource hash"));
                 return -1;
               }
-              if ((ret = uccn_link_trackers(node, peer, hash)) < 0) {
-                uccndbg(BACKTRACE_FROM(__LINE__ -1));
-                return ret;
-              }
-              if (ret > 0) {
-                tracked_hashes[num_tracked_hashes++] = hash;
-              }
+              hashes[num_hashes++] = hash;
             }
             mpack_done_array(reader);
+
+            hash = crc32((const uint8_t *)hashes, sizeof(uint32_t) * num_hashes);
+            if (peer->provided_content_hash != hash) {
+              if ((ret = uccn_unlink_trackers(node, peer)) < 0) {
+                uccndbg(BACKTRACE_FROM(__LINE__ - 1));
+                return ret;
+              }
+              for (j = 0; j < num_hashes; ++j) {
+                if ((ret = uccn_link_trackers(node, peer, hashes[j])) < 0) {
+                  uccndbg(BACKTRACE_FROM(__LINE__ -1));
+                  return ret;
+                }
+                if (ret > 0) {
+                  tracked_hashes[num_tracked_hashes++] = hashes[j];
+                }
+              }
+              peer->provided_content_hash = hash;
+            }
           }
           break;
         case UCCN_TRACKED_ARRAY:
-          if ((ret = uccn_unlink_providers(node, peer)) < 0) {
-            uccndbg(BACKTRACE_FROM(__LINE__ - 1));
-            return ret;
-          }
           if (mpack_expect_array_max_or_nil(reader, CONFIG_UCCN_MAX_NUM_RESOURCES, &array_size)) {
             for (j = 0; j < array_size; ++j) {
               hash = mpack_expect_u32(reader);
@@ -1200,15 +1215,27 @@ int uccn_process_link_group(struct uccn_node_s * node, struct uccn_peer_s * peer
                 uccnerr(RUNTIME_ERR("Missing resource hash"));
                 return -1;
               }
-              if ((ret = uccn_link_providers(node, peer, hash)) < 0) {
-                uccndbg(BACKTRACE_FROM(__LINE__ -1));
-                return ret;
-              }
-              if (ret > 0) {
-                provided_hashes[num_provided_hashes++] = hash;
-              }
+              hashes[num_hashes++] = hash;
             }
             mpack_done_array(reader);
+
+            hash = crc32((const uint8_t *)hashes, sizeof(uint32_t) * num_hashes);
+            if (peer->tracked_content_hash != hash) {
+              if ((ret = uccn_unlink_providers(node, peer)) < 0) {
+                uccndbg(BACKTRACE_FROM(__LINE__ - 1));
+                return ret;
+              }
+              for (j = 0; j < array_size; ++j) {
+                if ((ret = uccn_link_providers(node, peer, hashes[j])) < 0) {
+                  uccndbg(BACKTRACE_FROM(__LINE__ -1));
+                  return ret;
+                }
+                if (ret > 0) {
+                  provided_hashes[num_provided_hashes++] = hashes[j];
+                }
+              }
+              peer->tracked_content_hash = hash;
+            }
           }
           break;
         default:

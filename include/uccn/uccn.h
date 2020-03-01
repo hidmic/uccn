@@ -85,6 +85,8 @@ struct uccn_peer_s
     struct timespec next_local_deadline;
   } liveliness;
 
+  uint32_t provided_content_hash;
+  uint32_t tracked_content_hash;
   size_t num_links;
 };
 
