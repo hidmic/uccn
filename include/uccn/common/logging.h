@@ -6,23 +6,30 @@
 #include <string.h>
 #include <syslog.h>
 
+#define EXPAND(x) x
+
 #define RUNTIME_ERR(msg, ...)                   \
-  msg " in %s @ " __FILE__ ":%d",               \
+  msg " in %s @ " __FILE__ ":%d\n",               \
     ##__VA_ARGS__, __PRETTY_FUNCTION__, __LINE__
 
 #define SYSTEM_ERR_FROM(line, msg, ...)                             \
-  "%s (%d). " msg " in %s @ " __FILE__ ":%d",                       \
+  "%s (%d). " msg " in %s @ " __FILE__ ":%d\n",                       \
   strerror(errno), errno, ##__VA_ARGS__, __PRETTY_FUNCTION__, line
 
 #define BACKTRACE_FROM(line) \
-  "(backtrace) %s @ " __FILE__ ":%d", __PRETTY_FUNCTION__, line
+  "(backtrace) %s @ " __FILE__ ":%d\n", __PRETTY_FUNCTION__, line
 
 #ifdef CONFIG_UCCN_LOGGING
 
-#define uccnerr(msg, ...) syslog(LOG_ERR, "[uccn] " msg, ##__VA_ARGS__)
-#define uccnwarn(msg, ...) syslog(LOG_WARNING, "[uccn] " msg, ##__VA_ARGS__)
-#define uccninfo(msg, ...) syslog(LOG_INFO, "[uccn] " msg, ##__VA_ARGS__)
-#define uccndbg(msg, ...) syslog(LOG_DEBUG, "[uccn] " msg, ##__VA_ARGS__)
+#define _uccnerr(msg, ...)  syslog(LOG_ERR, "[uccn] " msg "\n", ##__VA_ARGS__)
+#define _uccnwarn(msg, ...) syslog(LOG_WARNING, "[uccn] " msg "\n", ##__VA_ARGS__)
+#define _uccninfo(msg, ...) syslog(LOG_INFO, "[uccn] " msg "\n", ##__VA_ARGS__)
+#define _uccndbg(msg, ...)  syslog(LOG_DEBUG, "[uccn] " msg "\n", ##__VA_ARGS__)
+
+#define uccnerr(msg, ...)   _uccnerr(msg)
+#define uccnwarn(msg, ...)  _uccnwarn(msg)
+#define uccninfo(msg, ...)  _uccninfo(msg)
+#define uccndbg(msg, ...)   _uccndbg(msg)
 
 #else
 
