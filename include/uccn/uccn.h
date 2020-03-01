@@ -191,6 +191,8 @@ int uccn_post(struct uccn_content_provider_s * provider, const void * content);
 
 int uccn_spin(struct uccn_node_s * node, const struct timespec * timeout);
 
+int uccn_spin_until(struct uccn_node_s * node, const struct timespec * timeout_time);
+
 int uccn_stop(struct uccn_node_s * node);
 
 int uccn_node_fini(struct uccn_node_s * node);

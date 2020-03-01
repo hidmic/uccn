@@ -260,6 +260,27 @@ class node final {
     generic_track(resource, wrapper);
   }
 
+  void spin_until(const struct timespec * timeout_time)
+  {
+    if (uccn_spin_until(&c_node_, timeout_time) < 0) {
+      std::stringstream message;
+      message << "Failed to spin " << c_node_.name << " node";
+      throw std::runtime_error(message.str());
+    }
+  }
+
+  void spin_until(const std::chrono::steady_clock::timepoint & timeout_time) {
+    auto duration = timeout_time.time_since_epoch();
+    auto nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
+    auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration);
+    nsecs -= secs;
+
+    struct timespec c_timeout;
+    c_timeout.tv_sec = secs.count();
+    c_timeout.tv_nsec = nsecs.count();
+    spin_until(&c_timeout);
+  }
+
   void spin(const struct timespec * timeout)
   {
     if (uccn_spin(&c_node_, timeout) < 0) {

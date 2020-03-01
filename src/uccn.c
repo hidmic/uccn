@@ -688,6 +688,20 @@ int uccn_process_incoming(struct uccn_node_s * node,
 
 int uccn_spin(struct uccn_node_s * node, const struct timespec * timeout)
 {
+  int ret;
+  struct timespec timeout_time = TIMESPEC_INF;
+  if (timeout) {
+    if ((ret = clock_gettime(CLOCK_MONOTONIC, &timeout_time)) != 0) {
+      uccnerr(SYSTEM_ERR_FROM(__LINE__ - 1, "Failed to get current time"));
+      return ret;
+    }
+    timespec_add(&timeout_time, timeout);
+  }
+  return uccn_spin_until(node, &timeout_time);
+}
+
+int uccn_spin_until(struct uccn_node_s * node, const struct timespec * timeout_time)
+{
   fd_set rfds;
   int nfds, nret = 0, ret = 0;
   size_t num_active_trackers;
@@ -697,9 +711,9 @@ int uccn_spin(struct uccn_node_s * node, const struct timespec * timeout)
   struct timespec next_probe_time;
   struct timespec next_assert_time;
   struct timespec next_discovery_time;
-  struct timespec timeout_time = TIMESPEC_INF;
 
   assert(node != NULL);
+  assert(timeout_time != NULL);
 
   if ((ret = clock_gettime(CLOCK_MONOTONIC, &current_time)) != 0) {
     uccnerr(SYSTEM_ERR_FROM(__LINE__ - 1, "Failed to get current time"));
@@ -708,11 +722,6 @@ int uccn_spin(struct uccn_node_s * node, const struct timespec * timeout)
   next_assert_time = current_time;
   next_discovery_time = current_time;
   next_probe_time = current_time;
-
-  if (timeout) {
-    timeout_time = current_time;
-    timespec_add(&timeout_time, timeout);
-  }
 
   FD_ZERO(&rfds);
   nfds = eventfd_fileno(&node->stop_event);
@@ -813,10 +822,10 @@ int uccn_spin(struct uccn_node_s * node, const struct timespec * timeout)
       break;
     }
 
-    if (timespec_cmp(&current_time, &timeout_time) >= 0) {
+    if (timespec_cmp(&current_time, timeout_time) >= 0) {
       break;
     }
-    next_deadline = timeout_time;
+    next_deadline = *timeout_time;
     if (timespec_cmp(&next_deadline, &next_assert_time) > 0) {
       next_deadline = next_assert_time;
     }
