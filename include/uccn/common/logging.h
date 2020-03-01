@@ -26,10 +26,10 @@
 #define _uccninfo(msg, ...) syslog(LOG_INFO, "[uccn] " msg "\n", ##__VA_ARGS__)
 #define _uccndbg(msg, ...)  syslog(LOG_DEBUG, "[uccn] " msg "\n", ##__VA_ARGS__)
 
-#define uccnerr(msg, ...)   _uccnerr(msg)
-#define uccnwarn(msg, ...)  _uccnwarn(msg)
-#define uccninfo(msg, ...)  _uccninfo(msg)
-#define uccndbg(msg, ...)   _uccndbg(msg)
+#define uccnerr(msg, ...)   _uccnerr(msg, ##__VA_ARGS__)
+#define uccnwarn(msg, ...)  _uccnwarn(msg, ##__VA_ARGS__)
+#define uccninfo(msg, ...)  _uccninfo(msg, ##__VA_ARGS__)
+#define uccndbg(msg, ...)   _uccndbg(msg, ##__VA_ARGS__)
 
 #else
 

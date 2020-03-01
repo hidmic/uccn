@@ -269,7 +269,7 @@ class node final {
     }
   }
 
-  void spin_until(const std::chrono::steady_clock::timepoint & timeout_time) {
+  void spin_until(const std::chrono::steady_clock::time_point & timeout_time) {
     auto duration = timeout_time.time_since_epoch();
     auto nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(duration);
     auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration);
