@@ -174,7 +174,7 @@ uccn_track(struct uccn_node_s * node,
       uccndbg("Updating existing tracker for '%s' resource", resource->path);
       tracker->track = track;
       tracker->arg = arg;
-      goto leave;
+      goto leave_uccn_track;
     }
     if (endpoint->resource->hash == resource->hash) {
       uccnerr(RUNTIME_ERR("'%s' resource hash collides with '%s's",
@@ -190,7 +190,7 @@ uccn_track(struct uccn_node_s * node,
   endpoint->num_peers = 0;
   tracker->track = track;
   tracker->arg = arg;
- leave:
+ leave_uccn_track:
 #if CONFIG_UCCN_MULTITHREADED
   assert(pthread_mutex_unlock(&node->mutex) == 0);
 #endif
@@ -216,7 +216,7 @@ uccn_advertise(struct uccn_node_s * node, const struct uccn_resource_s * resourc
 
     if (endpoint->resource == resource) {
       uccndbg("Provider for '%s' resource already registered", resource->path);
-      return provider;
+      goto leave_uccn_advertise;
     }
     if (endpoint->resource->hash == resource->hash) {
       uccnerr(RUNTIME_ERR("'%s' resource hash collides with '%s's",
@@ -229,6 +229,7 @@ uccn_advertise(struct uccn_node_s * node, const struct uccn_resource_s * resourc
   endpoint->node = node;
   endpoint->resource = resource;
   endpoint->num_peers = 0;
+ leave_uccn_advertise:
 #if CONFIG_UCCN_MULTITHREADED
   assert(pthread_mutex_unlock(&node->mutex) == 0);
 #endif
@@ -859,7 +860,7 @@ int uccn_spin_until(struct uccn_node_s * node, const struct timespec * timeout_t
       stimeout = next_deadline;
       timespec_diff(&stimeout, &current_time);
       ret = nret = pselect(nfds, &rfds, NULL, NULL, &stimeout, NULL);
-    } while(ret < 0 && errno == EINTR);
+    } while (ret < 0 && errno == EINTR);
 
     if (ret < 0) {
       uccnerr(SYSTEM_ERR_FROM(__LINE__ - 3, "Failed to poll sockets"));
@@ -984,7 +985,6 @@ int uccn_process_content_blob(struct uccn_node_s * node, struct uccn_peer_s * pe
     endpoint = (struct uccn_content_endpoint_s *)tracker;
 
     if (endpoint->resource->hash == hash) {
-
       content = NULL;
       if ((ret = endpoint->resource->unpack(endpoint->resource, blob, &content)) < 0) {
         uccndbg(BACKTRACE_FROM(__LINE__ - 1));
@@ -1190,6 +1190,7 @@ int uccn_process_link_group(struct uccn_node_s * node, struct uccn_peer_s * peer
 
             hash = crc32((const uint8_t *)hashes, sizeof(uint32_t) * num_hashes);
             if (peer->provided_content_hash != hash) {
+              // TODO(hidmic): do better than re-linking all endpoints
               if ((ret = uccn_unlink_trackers(node, peer)) < 0) {
                 uccndbg(BACKTRACE_FROM(__LINE__ - 1));
                 return ret;
@@ -1221,6 +1222,7 @@ int uccn_process_link_group(struct uccn_node_s * node, struct uccn_peer_s * peer
 
             hash = crc32((const uint8_t *)hashes, sizeof(uint32_t) * num_hashes);
             if (peer->tracked_content_hash != hash) {
+              // TODO(hidmic): do better than re-linking all endpoints
               if ((ret = uccn_unlink_providers(node, peer)) < 0) {
                 uccndbg(BACKTRACE_FROM(__LINE__ - 1));
                 return ret;
